@@ -1,24 +1,3 @@
--- ============================================================
--- MealKit – Subscription-Based Recipe & Meal Planning System
--- Database Schema  v1.0.0
--- ============================================================
--- Compatible : MySQL 8.0+ / MariaDB 10.4+
--- Charset    : utf8mb4  (full Unicode + emoji support)
--- Engine     : InnoDB   (FK constraint enforcement)
--- Currency   : GHS (Ghanaian Cedi)  – change per locale
--- ============================================================
--- SETUP INSTRUCTIONS
--- ------------------
---   1. Open phpMyAdmin  →  http://localhost/phpmyadmin
---   2. Create a new database named  mealkit_db
---   3. Select mealkit_db, click Import, and choose this file
---   4. After a successful import visit:
---      http://localhost/mealkit/database/seed.php
---      to load the default admin, subscription plans, categories,
---      and sample recipe data.
---   !! Delete seed.php from the server before going to production !!
--- ============================================================
-
 CREATE DATABASE IF NOT EXISTS `mealkit_db`
     CHARACTER SET  utf8mb4
     COLLATE        utf8mb4_unicode_ci;
@@ -30,12 +9,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_MODE            = 'NO_AUTO_VALUE_ON_ZERO';
 SET time_zone           = '+00:00';
 
--- ============================================================
--- TABLE 1: admins
--- Back-office / administrative user accounts.
--- Kept separate from the public `users` table so that a
--- compromised customer account can never escalate to admin.
--- ============================================================
 DROP TABLE IF EXISTS `admins`;
 CREATE TABLE `admins` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -57,11 +30,6 @@ CREATE TABLE `admins` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Administrative back-office user accounts';
 
-
--- ============================================================
--- TABLE 2: users
--- Customer / subscriber accounts (public-facing).
--- ============================================================
 DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
     `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -90,11 +58,6 @@ CREATE TABLE `users` (
   COMMENT='Customer subscriber accounts';
 
 
--- ============================================================
--- TABLE 3: categories
--- Recipe categories (Breakfast, Dinner, Vegan, etc.).
--- Created and managed exclusively by admins.
--- ============================================================
 DROP TABLE IF EXISTS `categories`;
 CREATE TABLE `categories` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -118,19 +81,13 @@ CREATE TABLE `categories` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Recipe categories managed by admins';
 
-
--- ============================================================
--- TABLE 4: subscription_plans
--- Defines the available subscription tiers and their privileges.
--- Referenced by the `subscriptions` table (many users → one plan).
--- ============================================================
 DROP TABLE IF EXISTS `subscription_plans`;
 CREATE TABLE `subscription_plans` (
     `id`                  INT UNSIGNED   NOT NULL AUTO_INCREMENT,
     `name`                VARCHAR(100)   NOT NULL,
     `slug`                VARCHAR(100)   NOT NULL,
     `description`         TEXT           NULL DEFAULT NULL,
-    `price`               DECIMAL(10,2)  NOT NULL DEFAULT 0.00    COMMENT 'Price in GHS',
+    `price`               DECIMAL(10,2)  NOT NULL DEFAULT 0.00    COMMENT 'Price in TZS',
     `duration_days`       INT UNSIGNED   NOT NULL DEFAULT 30       COMMENT 'Subscription duration in days',
     `recipe_limit`        INT UNSIGNED   NOT NULL DEFAULT 0        COMMENT '0 = unlimited',
     `meal_plan_limit`     INT UNSIGNED   NOT NULL DEFAULT 0        COMMENT '0 = unlimited',
@@ -147,15 +104,22 @@ CREATE TABLE `subscription_plans` (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='Subscription plan definitions (Free / Basic / Premium)';
+  COMMENT='Subscription plan definitions (Free / Monthly / Yearly)';
 
+-- Insert default subscription plans
+INSERT INTO `subscription_plans`
+(`name`, `slug`, `description`, `price`, `duration_days`, `recipe_limit`, `meal_plan_limit`, `can_download`, `can_access_premium`, `features`, `is_popular`, `status`, `created_at`)
+VALUES
+('Free', 'free', 'Access to public recipes and basic meal planning features.', 0, 0, 0, 1, 0, 0,
+'["Access to public recipes","1 meal plan per month","Basic serving size calculator"]',
+0, 'active', NOW()),
+('Monthly', 'monthly', 'Unlock unlimited recipes, PDF downloads, and up to 5 meal plans.', 10000, 30, 0, 5, 1, 0,
+'["Unlimited public recipes","5 meal plans per month","PDF recipe download","Serving size calculator","Email support"]',
+1, 'active', NOW()),
+('Yearly', 'yearly', 'Everything in Monthly plus exclusive premium recipes and unlimited meal plans. Save 20% with annual billing.', 100000, 365, 0, 0, 1, 1,
+'["Everything in Monthly","Exclusive premium recipes","Unlimited meal plans","Priority support","Early access to new recipes","Monthly nutrition report","Save 20% annually"]',
+0, 'active', NOW());
 
--- ============================================================
--- TABLE 5: recipes
--- Core recipe records. Each recipe belongs to one category
--- and is created by one admin.
--- `is_premium = 1` restricts access to subscribed users.
--- ============================================================
 DROP TABLE IF EXISTS `recipes`;
 CREATE TABLE `recipes` (
     `id`           INT UNSIGNED  NOT NULL AUTO_INCREMENT,
@@ -195,12 +159,6 @@ CREATE TABLE `recipes` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Core recipe records with metadata';
 
-
--- ============================================================
--- TABLE 6: ingredients
--- Individual ingredient lines that belong to a recipe.
--- Deleted automatically when parent recipe is removed (CASCADE).
--- ============================================================
 DROP TABLE IF EXISTS `ingredients`;
 CREATE TABLE `ingredients` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -221,12 +179,6 @@ CREATE TABLE `ingredients` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Ingredient lines per recipe (child of recipes)';
 
-
--- ============================================================
--- TABLE 7: procedures
--- Step-by-step cooking instructions per recipe.
--- `step_number` is unique per recipe, enforced by composite UNIQUE.
--- ============================================================
 DROP TABLE IF EXISTS `procedures`;
 CREATE TABLE `procedures` (
     `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -248,10 +200,6 @@ CREATE TABLE `procedures` (
   COMMENT='Step-by-step cooking procedures per recipe';
 
 
--- ============================================================
--- TABLE 8: meal_plans
--- A customer's named, date-ranged meal plan (weekly or custom).
--- ============================================================
 DROP TABLE IF EXISTS `meal_plans`;
 CREATE TABLE `meal_plans` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -276,11 +224,6 @@ CREATE TABLE `meal_plans` (
   COMMENT='Customer meal plans (weekly or custom date range)';
 
 
--- ============================================================
--- TABLE 9: meal_plan_recipes
--- Junction: links a recipe to a specific meal plan slot
--- (day of week + meal type: breakfast / lunch / dinner / snack).
--- ============================================================
 DROP TABLE IF EXISTS `meal_plan_recipes`;
 CREATE TABLE `meal_plan_recipes` (
     `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -306,11 +249,6 @@ CREATE TABLE `meal_plan_recipes` (
   COMMENT='Junction table – recipes assigned to meal plan slots';
 
 
--- ============================================================
--- TABLE 10: subscriptions
--- One active subscription row per user (status tracks lifecycle).
--- References subscription_plans for the tier details.
--- ============================================================
 DROP TABLE IF EXISTS `subscriptions`;
 CREATE TABLE `subscriptions` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -339,12 +277,6 @@ CREATE TABLE `subscriptions` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='User subscription records (lifecycle: pending → active → expired)';
 
-
--- ============================================================
--- TABLE 11: favourites
--- Customers bookmark their favourite recipes.
--- Composite UNIQUE prevents duplicate bookmarks.
--- ============================================================
 DROP TABLE IF EXISTS `favourites`;
 CREATE TABLE `favourites` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -366,12 +298,7 @@ CREATE TABLE `favourites` (
   COMMENT='Customer favourite / bookmarked recipes';
 
 
--- ============================================================
--- TABLE 12: payments
--- Mobile Money sandbox payment records.
--- Linked to a subscription (nullable – supports one-off payments).
--- `gateway_response` stores the full sandbox JSON payload.
--- ============================================================
+
 DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
     `id`               INT UNSIGNED   NOT NULL AUTO_INCREMENT,
@@ -379,9 +306,9 @@ CREATE TABLE `payments` (
     `subscription_id`  INT UNSIGNED   NULL DEFAULT NULL,
     `transaction_ref`  VARCHAR(100)   NOT NULL                    COMMENT 'Unique reference (UUID or sandbox ref)',
     `amount`           DECIMAL(10,2)  NOT NULL,
-    `currency`         CHAR(3)        NOT NULL DEFAULT 'GHS',
-    `payment_method`   ENUM('mobile_money','card','bank') NOT NULL DEFAULT 'mobile_money',
-    `provider`         VARCHAR(50)    NULL DEFAULT NULL            COMMENT 'MTN, Vodafone, AirtelTigo, etc.',
+    `currency`         CHAR(3)        NOT NULL DEFAULT 'TZS',
+    `payment_method`   ENUM('mobile_money') NOT NULL DEFAULT 'mobile_money',
+    `provider`         VARCHAR(50)    NULL DEFAULT NULL            COMMENT 'Mpesa, TigoPesa, AirtelMoney, Halotel',
     `phone_number`     VARCHAR(25)    NULL DEFAULT NULL,
     `status`           ENUM('pending','success','failed','refunded') NOT NULL DEFAULT 'pending',
     `gateway_response` JSON           NULL DEFAULT NULL            COMMENT 'Full sandbox API response payload',
@@ -403,14 +330,8 @@ CREATE TABLE `payments` (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='Mobile Money (and other) payment transaction records';
+  COMMENT='Mobile Money payment transaction records';
 
-
--- ============================================================
--- TABLE 13: recipe_downloads
--- Tracks every PDF download per user per recipe.
--- Allows admin to see download counts and enforce plan limits.
--- ============================================================
 DROP TABLE IF EXISTS `recipe_downloads`;
 CREATE TABLE `recipe_downloads` (
     `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -434,11 +355,6 @@ CREATE TABLE `recipe_downloads` (
   COMMENT='Audit log of every recipe PDF download per user';
 
 
--- ============================================================
--- TABLE 14: notifications
--- In-app notification inbox per customer.
--- `is_read` toggled to 1 when the user opens the notification.
--- ============================================================
 DROP TABLE IF EXISTS `notifications`;
 CREATE TABLE `notifications` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -463,11 +379,5 @@ CREATE TABLE `notifications` (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='In-app notification inbox per customer';
 
-
--- Re-enable FK enforcement
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ============================================================
--- SCHEMA COMPLETE
--- Run http://localhost/mealkit/database/seed.php next.
--- ============================================================

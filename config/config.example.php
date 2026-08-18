@@ -37,7 +37,7 @@ define('APP_URL',         'http://localhost/mealkit');
 // ══════════════════════════════════════════════════════════════════════════════
 
 define('DB_HOST',         'localhost');
-define('DB_PORT',         '3306');
+define('DB_PORT',         '3307');
 define('DB_NAME',         'mealkit_db');
 define('DB_USER',         'your_database_user');
 define('DB_PASS',         'your_database_password');
