@@ -19,8 +19,6 @@ ob_start();
  *   Session::isLoggedIn();
  */
 
-declare(strict_types=1);
-
 class Session
 {
     /** Tracks whether session_start() has been called this request */
