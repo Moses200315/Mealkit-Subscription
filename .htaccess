@@ -2,10 +2,11 @@ Options -Indexes
 
 # Enable URL Rewriting
 RewriteEngine On
+RewriteCond %{HTTPS:X-Fowarded-Proto} !https
 
 # Redirect to HTTPS (uncomment in production)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Allow direct access to real files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
