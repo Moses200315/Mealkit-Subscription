@@ -415,7 +415,7 @@ function format_currency($amount, $symbol = 'TSH') {
     $symbol = is_string($symbol) ? $symbol : 'TSH';
     return $symbol . ' ' . number_format((float)$amount, 2);
 }
-
+/**
  * Format a file size in bytes to a human-readable string.
  *
  * @param  int  $bytes
