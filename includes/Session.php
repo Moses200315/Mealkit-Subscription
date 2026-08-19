@@ -1,5 +1,5 @@
 <?php
-
+ob_start();
 /**
  * MealKit – Session Manager
  * ==========================
