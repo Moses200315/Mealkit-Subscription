@@ -30,7 +30,7 @@ define('APP_CHARSET',     'UTF-8');
 
 // ── Base URL (no trailing slash) ──────────────────────────────────────────────
 // Change to your domain in production: define('APP_URL', 'https://yourdomain.com');
-define('APP_URL',         'http://mealkit-subscription.onrender.com');
+define('APP_URL',         'https://mealkit-subscription.onrender.com');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DATABASE
