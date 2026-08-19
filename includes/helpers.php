@@ -411,12 +411,11 @@ function time_ago(string $datetime): string
  * @param  int    $decimals Number of decimal places
  * @return string           e.g. '₵ 99.99'
  */
-function format_currency(float $amount, string $symbol = CURRENCY_SYMBOL, int $decimals = 2): string
-{
-    return $symbol . ' ' . number_format($amount, $decimals);
+function format_currency($amount, $symbol = 'TSH'){
+    $symbol = is_string($symbol) ? $symbol : 'TSH';
+    return $symbol . ' ' . number_format((float)$amount, 2);
 }
 
-/**
  * Format a file size in bytes to a human-readable string.
  *
  * @param  int  $bytes
