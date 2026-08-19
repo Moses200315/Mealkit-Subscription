@@ -1144,9 +1144,8 @@ code { background: #f1f5f9; color: #2d6a4f; border-radius: 4px; padding: .15em .
     }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   20. Responsive Overrides
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* 20. Responsive Overrides
+*/
 @media (max-width: 575.98px) {
     .main-area { padding: 1rem .75rem; }
     .card-recipe .card-img-top { height: 160px; }
