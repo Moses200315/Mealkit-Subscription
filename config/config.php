@@ -126,7 +126,9 @@ define('NOTIFICATION_LIMIT',    50);               // max notifications to load
 // ══════════════════════════════════════════════════════════════════════════════
 
 define('CURRENCY_CODE',   'TZS');
-define('CURRENCY_SYMBOL', 'TSh');
+if (!defined('CURRENCY_SYMBOL')){
+    define('CURRENCY_SYMBOL','TSH');
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MOBILE MONEY SANDBOX
