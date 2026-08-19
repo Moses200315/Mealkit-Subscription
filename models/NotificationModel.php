@@ -169,7 +169,7 @@ class NotificationModel extends BaseModel
     {
         $this->notify([
             'user_id'    => $userId,
-            'title'      => 'Payment Successful – ' . format_currency($amount),
+            'title'      => 'Payment Successful – ' . format_currency($amount,'TSH'),
             'message'    => "We received your payment of " . format_currency($amount) . " via {$provider}. Your subscription has been activated.",
             'type'       => 'success',
             'category'   => 'payment',
