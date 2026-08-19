@@ -2,18 +2,12 @@ Options -Indexes
 
 # Enable URL Rewriting
 RewriteEngine On
-#Redirect HTTP to HTTPS for Render Proxy
-RewriteCond %{HTTPS:X-Fowarded-Proto} !https
-
-# Redirect to HTTPS (uncomment in production)
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Allow direct access to real files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Route everything else through the front controller
+# Route everything else through index.php
 RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
 
 # Security Headers
