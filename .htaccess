@@ -2,6 +2,7 @@ Options -Indexes
 
 # Enable URL Rewriting
 RewriteEngine On
+#Redirect HTTP to HTTPS for Render Proxy
 RewriteCond %{HTTPS:X-Fowarded-Proto} !https
 
 # Redirect to HTTPS (uncomment in production)
