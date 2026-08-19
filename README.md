@@ -96,16 +96,6 @@ All requests are routed through `index.php` via query string parameter `url`.
 - `/auth/login` or `?url=auth/login` → `AuthController@login`
 - `/recipes/view/42` or `?url=recipes/view/42` → `RecipeController@viewRecipe`
 
-## Default Credentials
-
-### Admin Account
-- Email: `admin@mealkit.com`
-- Password: `admin123`
-
-### Customer Account (from seed data)
-- Email: `customer@example.com`
-- Password: `password123`
-
 ## Subscription Plans
 
 - **Free** - Access to public recipes and basic meal planning
