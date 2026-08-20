@@ -1,98 +1,51 @@
 <?php
-
-/**
- * MealKit – Global Helper Functions
- * ===================================
- * A collection of pure utility functions available everywhere in the app.
- * These are intentionally procedural (not OOP) to keep call syntax short:
- *
- *   redirect('/mealkit/auth/login');
- *   echo e($userInput);
- *   echo url('recipes/view/12');
- *
- * Helpers depend only on the constants defined in config.php and
- * the static classes Session and Security.
- */
-
 declare(strict_types=1);
 
-// ══════════════════════════════════════════════════════════════════════════════
-// OUTPUT & ESCAPING
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Escape a value for safe HTML output.
- * Short alias for Security::escape() – use in every view template.
- *
- * @param  mixed  $value
- * @return string
- */
 function e(mixed $value): string
 {
     return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-/**
- * Print an escaped value directly (convenience wrapper around e()).
- */
 function pe(mixed $value): void
 {
     echo e($value);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ROUTING & URLS
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Build a full application URL from a relative path.
- *
- * @param  string $path  e.g. 'recipes/view/12'  or  '/auth/login'
- * @return string        e.g. 'http://localhost/mealkit/recipes/view/12'
- */
 function url(string $path = ''): string
 {
     $path = ltrim($path, '/');
     return $path === '' ? APP_URL . '/' : APP_URL . '/' . $path;
 }
 
-/**
- * Build a URL to a public asset (CSS, JS, image, font).
- *
- * @param  string $path  e.g. 'css/style.css'
- * @return string
- */
 function asset(string $path): string
 {
     return ASSETS_URL . '/' . ltrim($path, '/');
 }
 
-/**
- * Build a URL to an uploaded file.
- *
- * @param  string $path  e.g. 'recipes/jollof.jpg'
- * @return string
- */
 function upload_url(string $path): string
 {
     return UPLOADS_URL . '/' . ltrim($path, '/');
 }
 
 /**
- * Build the URL for a recipe image, falling back to the default placeholder.
- *
- * @param  string|null $filename  Stored filename (null = use default)
- * @return string
+ * Build the URL for a recipe image.
+ * Supports Cloudinary full URLs, local uploads, and fallbacks.
  */
 function recipe_img_url(?string $filename): string
 {
     if ($filename) {
-        // Try the uploads directory first
+        // 1. Kama filename ni URL kamili ya Cloudinary (https://res.cloudinary.com/...)
+        if (str_starts_with($filename, 'http://') || str_starts_with($filename, 'https://')) {
+            return $filename;
+        }
+
+        // 2. Local uploads directory
         $uploadPath = RECIPE_IMG_PATH . DS . $filename;
         if (file_exists($uploadPath)) {
             return RECIPE_IMG_URL . '/' . $filename;
         }
-        // Fallback to assets directory if file exists there
+
+        // 3. Fallback to assets directory
         $assetPath = ASSETS_PATH . DS . 'images' . DS . $filename;
         if (file_exists($assetPath)) {
             return ASSETS_URL . '/images/' . $filename;
@@ -103,14 +56,18 @@ function recipe_img_url(?string $filename): string
 
 /**
  * Build the URL for a user avatar, falling back to the default placeholder.
- *
- * @param  string|null $filename  Stored filename (null = use default)
- * @return string
  */
 function avatar_url(?string $filename): string
 {
-    if ($filename && $filename !== DEFAULT_AVATAR && file_exists(PROFILE_IMG_PATH . DS . $filename)) {
-        return PROFILE_IMG_URL . '/' . $filename;
+    if ($filename) {
+        // Kama ni URL kamili ya Cloudinary
+        if (str_starts_with($filename, 'http://') || str_starts_with($filename, 'https://')) {
+            return $filename;
+        }
+
+        if ($filename !== DEFAULT_AVATAR && file_exists(PROFILE_IMG_PATH . DS . $filename)) {
+            return PROFILE_IMG_URL . '/' . $filename;
+        }
     }
     return ASSETS_URL . '/images/default-avatar.png';
 }
@@ -119,15 +76,8 @@ function avatar_url(?string $filename): string
 // REDIRECTION
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Redirect to a URL and stop execution.
- *
- * @param  string $url         Full URL or APP_URL-relative path
- * @param  int    $statusCode  HTTP status (301 = permanent, 302 = temporary)
- */
 function redirect(string $url, int $statusCode = 302): never
 {
-    // If the URL does not start with http(s) treat it as an APP_URL-relative path
     if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
         $url = APP_URL . '/' . ltrim($url, '/');
     }
@@ -135,11 +85,6 @@ function redirect(string $url, int $statusCode = 302): never
     exit;
 }
 
-/**
- * Redirect back to the HTTP Referer, or to a fallback URL.
- *
- * @param string $fallback  Fallback URL if Referer is unavailable
- */
 function redirect_back(string $fallback = '/'): never
 {
     $referer = $_SERVER['HTTP_REFERER'] ?? '';
@@ -150,24 +95,11 @@ function redirect_back(string $fallback = '/'): never
 // FLASH MESSAGES
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Set a flash message (delegate to Session).
- *
- * @param string $type    'success' | 'error' | 'warning' | 'info'
- * @param string $message
- */
 function flash(string $type, string $message): void
 {
     Session::setFlash($type, $message);
 }
 
-/**
- * Render all pending flash messages as Bootstrap alert divs.
- * Clears messages after rendering.
- * Safe to call multiple times per page – messages are shown only once.
- *
- * @return string  HTML string ready for echo
- */
 function render_flash(): string
 {
     $typeMap = [
@@ -190,25 +122,18 @@ function render_flash(): string
         foreach ($messages as $msg) {
             $icon = $icons[$flashType] ?? '';
             $html .= '<div class="alert alert-' . $bsType . ' alert-dismissible fade show" role="alert">';
-                $html .= '<span class="me-2">' . $icon . '</span>' . e($msg);
-                $html .= '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                $html .= '</div>';
-            }
+            $html .= '<span class="me-2">' . $icon . '</span>' . e($msg);
+            $html .= '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            $html .= '</div>';
         }
-        return $html;
+    }
+    return $html;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // OLD FORM INPUT
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Retrieve an old form field value (for repopulating inputs after validation).
- *
- * @param  string $key      Form field name
- * @param  string $default  Fallback value
- * @return string           HTML-escaped value ready for use in value="" attribute
- */
 function old(string $key, string $default = ''): string
 {
     return Session::getOldInput($key, $default);
@@ -218,41 +143,26 @@ function old(string $key, string $default = ''): string
 // AUTHENTICATION SHORTCUTS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Return true if any user is currently logged in.
- */
 function is_logged_in(): bool
 {
     return Session::isLoggedIn();
 }
 
-/**
- * Return true if the logged-in user is a customer.
- */
 function is_customer(): bool
 {
     return Session::isCustomer();
 }
 
-/**
- * Return true if the logged-in user is an admin (any admin role).
- */
 function is_admin(): bool
 {
     return Session::isAdmin();
 }
 
-/**
- * Return the current user data array, or null for guests.
- */
 function current_user(): ?array
 {
     return Session::user();
 }
 
-/**
- * Return the current user's ID, or null for guests.
- */
 function current_user_id(): ?int
 {
     return Session::userId();
@@ -262,17 +172,11 @@ function current_user_id(): ?int
 // CSRF
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Render the CSRF hidden input field for embedding in forms.
- */
 function csrf_field(): string
 {
     return Security::csrfField();
 }
 
-/**
- * Return the raw CSRF token string.
- */
 function csrf_token(): string
 {
     return Security::generateCSRFToken();
@@ -282,15 +186,8 @@ function csrf_token(): string
 // STRING UTILITIES
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Convert a string to a URL-friendly slug.
- *
- * @param  string $text   Source string (e.g. recipe title)
- * @return string         e.g. 'ghanaian-jollof-rice'
- */
 function slugify(string $text): string
 {
-    // Transliterate Unicode characters to ASCII equivalents
     $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text) ?: $text;
     $text = strtolower($text);
     $text = preg_replace('/[^a-z0-9\s\-]/', '', $text);
@@ -298,14 +195,6 @@ function slugify(string $text): string
     return trim($text, '-');
 }
 
-/**
- * Truncate a string to a maximum length, appending a suffix if cut.
- *
- * @param  string $text    Input string
- * @param  int    $limit   Maximum character count
- * @param  string $suffix  Appended when truncated (default '…')
- * @return string
- */
 function truncate(string $text, int $limit = 120, string $suffix = '…'): string
 {
     if (mb_strlen($text, 'UTF-8') <= $limit) {
@@ -314,12 +203,6 @@ function truncate(string $text, int $limit = 120, string $suffix = '…'): strin
     return rtrim(mb_substr($text, 0, $limit, 'UTF-8')) . $suffix;
 }
 
-/**
- * Convert a number of minutes to a human-readable duration string.
- *
- * @param  int    $minutes  e.g. 95
- * @return string           e.g. '1 hr 35 min'
- */
 function format_duration(int $minutes): string
 {
     if ($minutes <= 0) {
@@ -337,12 +220,6 @@ function format_duration(int $minutes): string
     return implode(' ', $parts);
 }
 
-/**
- * Ordinal suffix for an integer (1st, 2nd, 3rd, 4th …).
- *
- * @param  int    $n
- * @return string
- */
 function ordinal(int $n): string
 {
     $suffix = ['th','st','nd','rd'];
@@ -354,13 +231,6 @@ function ordinal(int $n): string
 // DATE & TIME
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Format a MySQL datetime string for display.
- *
- * @param  string|null $datetime  MySQL datetime (Y-m-d H:i:s) or null
- * @param  string      $format    PHP date format string
- * @return string
- */
 function format_date(?string $datetime, string $format = 'd M Y'): string
 {
     if (empty($datetime)) {
@@ -373,12 +243,6 @@ function format_date(?string $datetime, string $format = 'd M Y'): string
     }
 }
 
-/**
- * Return a human-friendly relative time string ("2 hours ago", "3 days ago").
- *
- * @param  string $datetime  MySQL datetime string
- * @return string
- */
 function time_ago(string $datetime): string
 {
     try {
@@ -403,24 +267,11 @@ function time_ago(string $datetime): string
 // CURRENCY & NUMBERS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Format a numeric amount as currency.
- *
- * @param  float  $amount
- * @param  string $symbol   Currency symbol (default: from config)
- * @param  int    $decimals Number of decimal places
- * @return string           e.g. '₵ 99.99'
- */
 function format_currency($amount, $symbol = 'TSH') {
     $symbol = is_string($symbol) ? $symbol : 'TSH';
     return $symbol . ' ' . number_format((float)$amount, 2);
 }
-/**
- * Format a file size in bytes to a human-readable string.
- *
- * @param  int  $bytes
- * @return string  e.g. '2.4 MB'
- */
+
 function format_file_size(int $bytes): string
 {
     if ($bytes < 1024)       return $bytes       . ' B';
@@ -430,81 +281,72 @@ function format_file_size(int $bytes): string
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FILE UPLOADS
+// FILE UPLOADS (CLOUDINARY INTEGRATION)
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Handle an image file upload: validate, rename, move, and optionally
- * delete the previously stored image.
- *
- * @param  array       $file        Single entry from $_FILES
- * @param  string      $directory   Absolute path to the destination directory
- * @param  string|null $oldFilename Existing filename to delete on success (optional)
- * @return array ['success' => bool, 'filename' => string, 'error' => string]
+ * Core function to upload file directly to Cloudinary.
  */
-function upload_image(array $file, string $directory, ?string $oldFilename = null): array
+function uploadToCloudinary(string $fileTmpPath): string|false
 {
-    // 1. Validate
+    $cloudName = 's04ipenq'; 
+    $uploadPreset = 'jvjz2p7n';
+
+    $url = "https://api.cloudinary.com/v1_1/{$cloudName}/image/upload";
+
+    $postFields = [
+        'file' => new CURLFile($fileTmpPath),
+        'upload_preset' => $uploadPreset
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    $responseData = json_decode((string)$response, true);
+
+    if (isset($responseData['secure_url'])) {
+        return $responseData['secure_url'];
+    }
+
+    return false;
+}
+
+/**
+ * Handles image upload via Cloudinary.
+ */
+function upload_image(array $file, string $directory = '', ?string $oldFilename = null): array
+{
+    // 1. Validate file
     $validation = Security::validateImageUpload($file);
     if (!$validation['valid']) {
         return ['success' => false, 'filename' => '', 'error' => $validation['error']];
     }
 
-    // 2. Generate unique filename: timestamp_random.ext
-    $ext         = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $newFilename = time() . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-    $destination = rtrim($directory, DS) . DS . $newFilename;
+    // 2. Upload to Cloudinary
+    $cloudinaryUrl = uploadToCloudinary($file['tmp_name']);
 
-    // 3. Move uploaded file
-    if (!move_uploaded_file($file['tmp_name'], $destination)) {
-        return ['success' => false, 'filename' => '', 'error' => 'Failed to save the uploaded file. Check directory permissions.'];
+    if ($cloudinaryUrl) {
+        return ['success' => true, 'filename' => $cloudinaryUrl, 'error' => ''];
     }
 
-    // 4. Delete old file if provided and it exists (never delete default images)
-    if ($oldFilename && !in_array($oldFilename, [DEFAULT_AVATAR, DEFAULT_RECIPE_IMG], true)) {
-        $oldPath = rtrim($directory, DS) . DS . $oldFilename;
-        if (file_exists($oldPath)) {
-            @unlink($oldPath);
-        }
-    }
-
-    return ['success' => true, 'filename' => $newFilename, 'error' => ''];
+    return ['success' => false, 'filename' => '', 'error' => 'Failed to upload image to Cloudinary.'];
 }
 
-/**
- * Safely delete an uploaded file from disk.
- * Never deletes default placeholder images.
- *
- * @param  string $directory   Absolute directory path
- * @param  string $filename    Filename to delete
- * @return bool
- */
 function delete_uploaded_file(string $directory, string $filename): bool
 {
-    if (in_array($filename, [DEFAULT_AVATAR, DEFAULT_RECIPE_IMG], true)) {
-        return false; // Protect defaults
-    }
-    $fullPath = rtrim($directory, DS) . DS . $filename;
-    return file_exists($fullPath) ? @unlink($fullPath) : false;
+    return true; // Images stored in Cloudinary are protected
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PAGINATION
+// PAGINATION & VIEWS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Build a pagination data array for use in view templates.
- *
- * @param  int    $totalItems   Total number of records
- * @param  int    $perPage      Records per page
- * @param  int    $currentPage  Current page number (1-based)
- * @param  string $baseUrl      Base URL for page links (no ?page= suffix)
- * @return array  {
- *   total_items, per_page, current_page, total_pages,
- *   has_prev, has_next, prev_page, next_page, offset,
- *   pages[]  (array of page numbers for link rendering)
- * }
- */
 function paginate(int $totalItems, int $perPage, int $currentPage, string $baseUrl = ''): array
 {
     $perPage     = max(1, $perPage);
@@ -512,7 +354,6 @@ function paginate(int $totalItems, int $perPage, int $currentPage, string $baseU
     $currentPage = max(1, min($currentPage, max(1, $totalPages)));
     $offset      = ($currentPage - 1) * $perPage;
 
-    // Build page number range (show at most 5 page buttons)
     $range   = 2;
     $start   = max(1, $currentPage - $range);
     $end     = min($totalPages, $currentPage + $range);
@@ -533,12 +374,6 @@ function paginate(int $totalItems, int $perPage, int $currentPage, string $baseU
     ];
 }
 
-/**
- * Render a Bootstrap 5 pagination nav from a paginate() data array.
- *
- * @param  array  $pager  Output of paginate()
- * @return string         HTML <nav> element
- */
 function render_pagination(array $pager): string
 {
     if ($pager['total_pages'] <= 1) {
@@ -550,16 +385,12 @@ function render_pagination(array $pager): string
 
     $html  = '<nav aria-label="Page navigation"><ul class="pagination justify-content-center flex-wrap">';
 
-    // Previous button
     if ($pager['has_prev']) {
-        $html .= '<li class="page-item">'
-               . '<a class="page-link" href="' . e($base . $sep . 'page=' . $pager['prev_page']) . '">&laquo; Prev</a>'
-               . '</li>';
+        $html .= '<li class="page-item"><a class="page-link" href="' . e($base . $sep . 'page=' . $pager['prev_page']) . '">&laquo; Prev</a></li>';
     } else {
         $html .= '<li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>';
     }
 
-    // First page + ellipsis
     if ($pager['pages'][0] > 1) {
         $html .= '<li class="page-item"><a class="page-link" href="' . e($base . $sep . 'page=1') . '">1</a></li>';
         if ($pager['pages'][0] > 2) {
@@ -567,29 +398,21 @@ function render_pagination(array $pager): string
         }
     }
 
-    // Numbered pages
     foreach ($pager['pages'] as $page) {
         $active = ($page === $pager['current_page']) ? ' active' : '';
-        $html .= '<li class="page-item' . $active . '">'
-               . '<a class="page-link" href="' . e($base . $sep . 'page=' . $page) . '">' . $page . '</a>'
-               . '</li>';
+        $html .= '<li class="page-item' . $active . '"><a class="page-link" href="' . e($base . $sep . 'page=' . $page) . '">' . $page . '</a></li>';
     }
 
-    // Last page + ellipsis
     $lastVisible = end($pager['pages']);
     if ($lastVisible < $pager['total_pages']) {
         if ($lastVisible < $pager['total_pages'] - 1) {
             $html .= '<li class="page-item disabled"><span class="page-link">…</span></li>';
         }
-        $html .= '<li class="page-item"><a class="page-link" href="'
-               . e($base . $sep . 'page=' . $pager['total_pages']) . '">' . $pager['total_pages'] . '</a></li>';
+        $html .= '<li class="page-item"><a class="page-link" href="' . e($base . $sep . 'page=' . $pager['total_pages']) . '">' . $pager['total_pages'] . '</a></li>';
     }
 
-    // Next button
     if ($pager['has_next']) {
-        $html .= '<li class="page-item">'
-               . '<a class="page-link" href="' . e($base . $sep . 'page=' . $pager['next_page']) . '">Next &raquo;</a>'
-               . '</li>';
+        $html .= '<li class="page-item"><a class="page-link" href="' . e($base . $sep . 'page=' . $pager['next_page']) . '">Next &raquo;</a></li>';
     } else {
         $html .= '<li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>';
     }
@@ -598,30 +421,12 @@ function render_pagination(array $pager): string
     return $html;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// VIEW / NAVIGATION HELPERS
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Return a CSS class string if the given URL path matches the current URL.
- * Used to highlight the active nav item.
- *
- * @param  string $path   Path segment to match (e.g. 'recipes' or 'admin/reports')
- * @param  string $class  Class to apply (default 'active')
- * @return string
- */
 function active_class(string $path, string $class = 'active'): string
 {
     $current = $_SERVER['REQUEST_URI'] ?? '';
     return str_contains($current, $path) ? $class : '';
 }
 
-/**
- * Render a Bootstrap badge for a recipe difficulty level.
- *
- * @param  string $difficulty  'easy' | 'medium' | 'hard'
- * @return string              HTML <span class="badge …"> element
- */
 function difficulty_badge(string $difficulty): string
 {
     $map = unserialize(DIFFICULTY_LABELS);
@@ -629,12 +434,6 @@ function difficulty_badge(string $difficulty): string
     return '<span class="badge bg-' . $d['class'] . '">' . e($d['label']) . '</span>';
 }
 
-/**
- * Render a Bootstrap badge for a subscription / payment status.
- *
- * @param  string $status
- * @return string
- */
 function status_badge(string $status): string
 {
     $map = [
@@ -655,20 +454,6 @@ function status_badge(string $status): string
     return '<span class="badge bg-' . $class . '">' . e(ucfirst($status)) . '</span>';
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SERVING SIZE CALCULATOR
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scale a recipe ingredient quantity to a new serving count.
- * Handles numeric quantities (including fractions like "1/2") and
- * passes through non-numeric values unchanged (e.g. "to taste", "a pinch").
- *
- * @param  string $quantity      Original quantity string (e.g. "2", "1/2", "250")
- * @param  int    $originalServings  Recipe's default serving count
- * @param  int    $newServings       Desired serving count
- * @return string                Scaled quantity string
- */
 function scale_quantity(string $quantity, int $originalServings, int $newServings): string
 {
     if ($originalServings <= 0 || $newServings <= 0) {
@@ -677,37 +462,25 @@ function scale_quantity(string $quantity, int $originalServings, int $newServing
 
     $factor = $newServings / $originalServings;
 
-    // Handle fraction strings like "1/2", "3/4"
     if (preg_match('/^(\d+)\s*\/\s*(\d+)$/', trim($quantity), $m)) {
         $numeric = (float) $m[1] / (float) $m[2];
         return format_quantity($numeric * $factor);
     }
 
-    // Handle mixed numbers like "1 1/2"
     if (preg_match('/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/', trim($quantity), $m)) {
         $numeric = (float) $m[1] + (float) $m[2] / (float) $m[3];
         return format_quantity($numeric * $factor);
     }
 
-    // Handle plain numerics (integers and decimals)
     if (is_numeric(trim($quantity))) {
         return format_quantity((float) $quantity * $factor);
     }
 
-    // Non-numeric (e.g. "to taste", "a pinch") – return unchanged
     return $quantity;
 }
 
-/**
- * Format a scaled numeric quantity back to a readable string.
- * Converts common decimals back to fractions for culinary readability.
- *
- * @param  float  $value
- * @return string
- */
 function format_quantity(float $value): string
 {
-    // Common fraction map - use string keys to avoid float to int conversion
     $fractions = [
         '0.125' => '1/8', '0.25' => '1/4', '0.333' => '1/3',
         '0.375' => '3/8', '0.5'  => '1/2', '0.625' => '5/8',
@@ -716,9 +489,7 @@ function format_quantity(float $value): string
 
     $whole    = (int) floor($value);
     $decimal  = round($value - $whole, 3);
-    $decimalStr = (string) $decimal;
 
-    // Find closest fraction within 0.01 tolerance
     $fracStr = '';
     foreach ($fractions as $fracStrKey => $label) {
         $fracVal = (float) $fracStrKey;
@@ -737,24 +508,9 @@ function format_quantity(float $value): string
     if ($decimal === 0.0 || abs($decimal) < 0.01) {
         return (string) $whole;
     }
-    // Fall back to one decimal place
     return rtrim(rtrim(number_format($value, 2), '0'), '.');
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SLUG GENERATION (unique, database-aware)
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Generate a URL slug that is unique in the given database table/column.
- * Appends an incrementing suffix (-2, -3 …) if collisions are found.
- *
- * @param  string  $title      Source title string
- * @param  string  $table      Database table name (e.g. 'recipes')
- * @param  string  $column     Slug column name (default 'slug')
- * @param  int     $excludeId  Exclude this row ID (for update operations)
- * @return string
- */
 function generate_unique_slug(string $title, string $table, string $column = 'slug', int $excludeId = 0): string
 {
     $db      = Database::getInstance();
@@ -781,17 +537,6 @@ function generate_unique_slug(string $title, string $table, string $column = 'sl
     return $slug;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// VIEW RENDERER
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Include a view file from the views/ directory, extracting
- * an associative array of data into local variables.
- *
- * @param  string $viewPath  Relative to views/ (e.g. 'admin/recipes/index')
- * @param  array  $data      Variables to expose inside the view
- */
 function render_view(string $viewPath, array $data = []): void
 {
     $file = VIEWS_PATH . DS . str_replace('/', DS, $viewPath) . '.php';
@@ -803,20 +548,10 @@ function render_view(string $viewPath, array $data = []): void
         include VIEWS_PATH . DS . 'layouts' . DS . '404.php';
         exit;
     }
-    extract($data, EXTR_SKIP);   // EXTR_SKIP: never overwrite existing variables
+    extract($data, EXTR_SKIP);
     require $file;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// DEBUG
-// ══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Dump one or more variables and terminate execution.
- * Only active when APP_DEBUG is true.
- *
- * @param mixed ...$vars
- */
 function dd(mixed ...$vars): never
 {
     if (APP_DEBUG) {
@@ -829,12 +564,6 @@ function dd(mixed ...$vars): never
     exit;
 }
 
-/**
- * Dump one or more variables without terminating.
- * Only active when APP_DEBUG is true.
- *
- * @param mixed ...$vars
- */
 function dump(mixed ...$vars): void
 {
     if (!APP_DEBUG) {
@@ -845,32 +574,4 @@ function dump(mixed ...$vars): void
         var_dump($var);
     }
     echo '</pre>';
-}
-function uploadToCloudinary($fileTmpPath) {
-    $cloudName = 's04ipenq'; 
-    $uploadPreset = 'jvjz2p7n';
-
-    $url = "https://api.cloudinary.com/v1_1/{$cloudName}/image/upload";
-
-    $postFields = [
-        'file' => new CURLFile($fileTmpPath),
-        'upload_preset' => $uploadPreset
-    ];
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    $responseData = json_decode($response, true);
-
-    if (isset($responseData['secure_url'])) {
-        return $responseData['secure_url'];
-    }
-
-    return false;
 }
