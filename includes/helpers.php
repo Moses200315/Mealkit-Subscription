@@ -846,4 +846,31 @@ function dump(mixed ...$vars): void
     }
     echo '</pre>';
 }
+function uploadToCloudinary($fileTmpPath) {
+    $cloudName = 's04ipenq'; 
+    $uploadPreset = 'jvjz2p7n';
 
+    $url = "https://api.cloudinary.com/v1_1/{$cloudName}/image/upload";
+
+    $postFields = [
+        'file' => new CURLFile($fileTmpPath),
+        'upload_preset' => $uploadPreset
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    $responseData = json_decode($response, true);
+
+    if (isset($responseData['secure_url'])) {
+        return $responseData['secure_url'];
+    }
+
+    return false;
+}
