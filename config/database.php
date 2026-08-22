@@ -63,7 +63,7 @@ class Database
                             "ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
 
             // Persistent connections (optional – improves performance under load)
-            // PDO::ATTR_PERSISTENT => true,
+             PDO::ATTR_PERSISTENT => true,
         ];
 
         try {
