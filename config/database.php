@@ -56,11 +56,7 @@ class Database
             PDO::ATTR_EMULATE_PREPARES   => false,
 
             // Force character set at connection level
-            PDO::MYSQL_ATTR_INIT_COMMAND =>
-                "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, " .
-                "time_zone = '+00:00', " .
-                "sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE," .
-                            "ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
 
             // Persistent connections (optional – improves performance under load)
              PDO::ATTR_PERSISTENT => true,
