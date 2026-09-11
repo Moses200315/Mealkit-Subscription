@@ -30,11 +30,11 @@ if (!in_array($_SERVER['REMOTE_ADDR'] ?? '', $allowedIPs, true)) {
 }
 
 // ── Database credentials (update if your XAMPP config differs) ─────────────
-define('SEED_DB_HOST', 'localhost');
-define('SEED_DB_NAME', 'mealkit_db');
-define('SEED_DB_USER', 'root');
-define('SEED_DB_PASS', '');          // XAMPP default: empty password
-define('SEED_DB_PORT', '3307');
+define('SEED_DB_HOST', 'mysql-12e98cdb-mealkit.d.aivencloud.com');
+define('SEED_DB_NAME', 'defaultdb');
+define('SEED_DB_USER', 'avnadmin');
+define('SEED_DB_PASS', 'AVNS_edL9kf2cfT4qPTWlJtS');          // XAMPP default: empty password
+define('SEED_DB_PORT', '13638');
 
 // ── Output helpers ──────────────────────────────────────────────────────────
 ob_start();
