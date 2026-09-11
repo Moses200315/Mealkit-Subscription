@@ -40,7 +40,7 @@ define('DB_HOST',         'mysql-12e98cdb-mealkit.d.aivencloud.com');
 define('DB_PORT',         '13638');
 define('DB_NAME',         'defaultdb');
 define('DB_USER',         'avnadmin');
-define('DB_PASS',         'AVNS_fvkYBYmyjmUTzw9nr3p');                     // XAMPP default: empty
+define('DB_PASS',         'AVNS_edL9kf2cfT4qPTWlJtS');                     // XAMPP default: empty
 define('DB_CHARSET',      'utf8mb4');
 define('DB_COLLATION',    'utf8mb4_unicode_ci');
 
